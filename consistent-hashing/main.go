@@ -42,23 +42,25 @@ func (ch *ConsistentHash) hashFunc(key string) *big.Int {
 func (ch *ConsistentHash) AddServerNode(node StorageNode) {
 	position := ch.hashFunc(node.Host)
 
-	//sort.Search uses the binary search
+	//sort.Search uses the binary search to find the first greatest number to the position in key array and return the index
 	index := sort.Search(len(ch.keys), func(i int) bool {
 		return ch.keys[i].Cmp(position) >= 0
 	})
 
+	// check collision i.e is already exists or not
 	if index < len(ch.keys) && ch.keys[index].Cmp(position) == 0 {
 		log.Printf("Collision occurred at position %v", position)
 		return
 	}
 
+	// add a hole in keys array for shifting the data
 	ch.keys = append(ch.keys, nil)
-	copy(ch.keys[index+1:], ch.keys[index:])
-	ch.keys[index] = position
+	copy(ch.keys[index+1:], ch.keys[index:]) // shift the data by 1 from the index
+	ch.keys[index] = position                // overwrite this index element
 
-	ch.nodes = append(ch.nodes, StorageNode{})
-	copy(ch.nodes[index+1:], ch.nodes[index:])
-	ch.nodes[index] = node
+	ch.nodes = append(ch.nodes, StorageNode{}) // do same add hole in storage node
+	copy(ch.nodes[index+1:], ch.nodes[index:]) //shift the data this by 1 from the index
+	ch.nodes[index] = node                     // overwrite this index element
 
 }
 
@@ -66,16 +68,18 @@ func (ch *ConsistentHash) AssignItem(item string) StorageNode {
 	if len(ch.keys) == 0 {
 		return StorageNode{}
 	}
-	position := ch.hashFunc(item)
+	position := ch.hashFunc(item) // get the hash localtion
 
+	// get the index at which its going to assign
 	index := sort.Search(len(ch.keys), func(i int) bool {
 		return ch.keys[i].Cmp(position) >= 0
 	})
 
+	// if index is reach to the last length of array then assign index to 0
 	if index == len(ch.keys) {
 		index = 0
 	}
-	return ch.nodes[index]
+	return ch.nodes[index] // keys will be assign to this storage node
 }
 
 func (ch *ConsistentHash) RemoveServerNode(node StorageNode) {
@@ -90,13 +94,17 @@ func (ch *ConsistentHash) RemoveServerNode(node StorageNode) {
 	})
 
 	if index < len(ch.keys) && ch.keys[index].Cmp(position) == 0 {
-		ch.keys = append(ch.keys[:index], ch.keys[index+1:]...)
-		ch.nodes = append(ch.nodes[:index], ch.nodes[index+1:]...)
+		ch.keys = append(ch.keys[:index], ch.keys[index+1:]...)    // remove the keys
+		ch.nodes = append(ch.nodes[:index], ch.nodes[index+1:]...) // remove the nodes
 		fmt.Printf("remove the node %v\n", node)
 	} else {
 		fmt.Printf("no node found %v\n", node)
 	}
 }
+
+// since key array and node array are 1-1 map on the basis of sorted array.
+// since node array will store the node details at sepecific index. and key
+// array will be storing the the index at which storage node are stored.
 
 func main() {
 	ch := NewConsistentHash()
