@@ -18,14 +18,17 @@ const (
 	datacenterIDbits = uint64(5)  // Binary: 00101
 	sequenceIDbits   = uint64(12) // Binary: 01100
 
-	max_datacenterID = (int64(-1)) ^ (int64(-1) << datacenterIDbits)
-	max_machineID    = (int64(-1)) ^ (int64(-1) << machineIDbits)
-	max_sequenceID   = int64(-1) ^ (int64(-1) << sequenceIDbits)
+	// to calculate the maximum number which can fit in container we are using here bit masking
+	max_datacenterID = (int64(-1)) ^ (int64(-1) << datacenterIDbits) // MAX VALUE: 2^5 - 1 = 31
+	max_machineID    = (int64(-1)) ^ (int64(-1) << machineIDbits)    // MAX VALUE: 2^5 - 1 = 31
+	max_sequenceID   = int64(-1) ^ (int64(-1) << sequenceIDbits)     // MAX VALUE: 2^12 - 1 =  4095
 
-	timeLeft     = uint8(22)
-	dataLeft     = uint8(17)
-	sequenceLeft = uint8(12)
-	tw_epoch     = int64(1288834974657)
+	// These variables tell the code exactly how many empty spaces it needs to jump over to the
+	// left to put the data into its correct compartment.
+	timeLeft    = uint8(22)
+	dataLeft    = uint8(17)
+	machineLeft = uint8(12) // shift the machineId
+	tw_epoch    = int64(1288834974657)
 )
 
 type worker struct {
@@ -46,6 +49,8 @@ func New(dID, mID int64) *worker {
 }
 
 func (w *worker) get_time_stamp_now() int64 {
+	// 1e6 is scientific notation for 1 x 10^6, which is equal to 1,000,000.
+	// i have used here to convert the nanosecond in milliseconds
 	return time.Now().UnixNano() / 1e6
 }
 
@@ -74,7 +79,7 @@ func (w *worker) generateUniqueID() (uint64, error) {
 	}
 
 	w.lastTimeStamp = timeStamp
-	id := ((timeStamp - tw_epoch) << timeLeft) | (w.datacenterID << int64(dataLeft)) | (w.machineID << int64(sequenceLeft)) | w.sequenceID
+	id := ((timeStamp - tw_epoch) << timeLeft) | (w.datacenterID << int64(dataLeft)) | (w.machineID << int64(machineLeft)) | w.sequenceID
 
 	return uint64(id), nil
 }
