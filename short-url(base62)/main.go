@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"strings"
 )
 
 const charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -16,7 +17,7 @@ func convertURL(URL_ID uint64) string {
 	for URL_ID > 0 {
 		rem := URL_ID % base
 		chars = append(chars, charset[rem])
-		URL_ID /= 10
+		URL_ID /= base
 	}
 
 	for low, high := 0, len(chars)-1; low < high; low, high = low+1, high-1 {
@@ -26,8 +27,23 @@ func convertURL(URL_ID uint64) string {
 	return string(chars)
 }
 
+func getOriginalURL(shortURL string) uint64 {
+	var URL_ID uint64
+	for i := 0; i < len(shortURL); i++ {
+		pos := strings.IndexByte(charset, shortURL[i])
+		if pos == -1 {
+			log.Printf("invalid character found")
+			continue
+		}
+		URL_ID = URL_ID*base + uint64(pos)
+	}
+	return URL_ID
+}
+
 func main() {
-	var URL uint64 = 29843724962314
-	shortURL := convertURL(URL)
+	var URL_ID uint64 = 29843724962314
+	shortURL := convertURL(URL_ID)
 	log.Printf("base 62 short url are %s", shortURL)
+	originalURL_ID := getOriginalURL(shortURL)
+	log.Printf("original url %d", originalURL_ID)
 }
